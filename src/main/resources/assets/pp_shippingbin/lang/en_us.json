@@ -1,0 +1,15 @@
+{
+  "itemGroup.pp_shippingbin": "Pocket Pastures",
+
+  "block.pp_shippingbin.example_block": "Example Block",
+  "item.pp_shippingbin.example_item": "Example Item",
+
+  "pp_shippingbin.configuration.title": "Shipping Bin Configs",
+  "pp_shippingbin.configuration.section.pp_shippingbin.common.toml": "Shipping Bin Configs",
+  "pp_shippingbin.configuration.section.pp_shippingbin.common.toml.title": "Shipping Bin Configs",
+  "pp_shippingbin.configuration.items": "Item List",
+  "pp_shippingbin.configuration.logDirtBlock": "Log Dirt Block",
+  "pp_shippingbin.configuration.magicNumberIntroduction": "Magic Number Text",
+  "pp_shippingbin.configuration.magicNumber": "Magic Number",
+  "block.pp_shippingbin.shipping_bin": "Shipping Bin"
+}
