@@ -17,7 +17,11 @@ public class ShippingBinConfig {
         builder.push("pricing");
 
         PRICE_ENTRIES = builder
-                .comment("Fallback pricing. Format: modid:item=value")
+                .comment(
+                        "Fallback pricing used only when the datapack does not define a price.",
+                        "Format: modid:item=value",
+                        "Example: minecraft:carrot=2"
+                )
                 .defineListAllowEmpty(
                         "prices",
                         List.of(
@@ -34,6 +38,6 @@ public class ShippingBinConfig {
     }
 
     public static void register() {
-    ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
-}
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
+    }
 }
