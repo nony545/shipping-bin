@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GGG",
+    "PBP",
+    "PPP"
+  ],
+  "key": {
+    "G": { "tag": "minecraft:gold_ingots" },
+    "P": { "tag": "minecraft:planks" },
+    "B": { "item": "pp_shippingbin:iron_shipping_bin" }
+  },
+  "result": {
+    "item": "pp_shippingbin:gold_shipping_bin"
+  }
+}

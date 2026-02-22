@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "III",
+    "PBP",
+    "PPP"
+  ],
+  "key": {
+    "I": { "tag": "minecraft:iron_ingots" },
+    "P": { "tag": "minecraft:planks" },
+    "B": { "item": "pp_shippingbin:wood_shipping_bin" }
+  },
+  "result": {
+    "item": "pp_shippingbin:iron_shipping_bin"
+  }
+}
