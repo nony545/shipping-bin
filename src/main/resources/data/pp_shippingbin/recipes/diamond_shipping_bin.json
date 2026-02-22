@@ -1,17 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "NNN",
+    "DDD",
     "PBP",
     "PPP"
   ],
   "key": {
-    "N": { "item": "minecraft:netherite_ingot" },
+    "D": { "item": "minecraft:diamond" },
     "P": { "tag": "minecraft:planks" },
-    "B": { "item": "pp_shippingbin:diamond_shipping_bin" }
+    "B": { "item": "pp_shippingbin:gold_shipping_bin" }
   },
   "result": {
-    "id": "pp_shippingbin:netherite_shipping_bin",
+    "id": "pp_shippingbin:diamond_shipping_bin",
     "count": 1
   }
 }
