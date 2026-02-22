@@ -1,6 +1,7 @@
 package com.nony545.pocketpastures.shippingbin.block.entity;
 
 import com.nony545.pocketpastures.shippingbin.block.ShippingBinBlock;
+import com.nony545.pocketpastures.shippingbin.pricing.PriceManager;
 import com.nony545.pocketpastures.shippingbin.registry.ModBlockEntities;
 import com.nony545.pocketpastures.shippingbin.tier.ShippingTier;
 import net.minecraft.core.BlockPos;
@@ -11,9 +12,9 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.WorldlyContainer;
-import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -84,13 +85,14 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
     }
 
     /**
-     * Sells only NON-currency items.
-     * Currency stacks are never deleted regardless of slot.
+     * Sells only items with a price in PriceManager.
+     * - Currency stacks are never deleted regardless of slot
+     * - Unsellables (no price) stay in the bin
      */
     private void shipAndPayout() {
         if (level == null || level.isClientSide) return;
 
-        int totalSoldItems = 0;
+        long payout = 0;
 
         for (int i = 0; i < items.size(); i++) {
             ItemStack stack = items.get(i);
@@ -99,14 +101,22 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
             // Protect currency anywhere in inventory
             if (stack.is(PAYOUT_ITEM)) continue;
 
-            totalSoldItems += stack.getCount();
+            int unitPrice = PriceManager.getUnitPrice(stack);
+            if (unitPrice <= 0) {
+                // Unsellable: leave it in the bin
+                continue;
+            }
+
+            // Sell it
+            payout += (long) unitPrice * (long) stack.getCount();
             items.set(i, ItemStack.EMPTY);
         }
 
-        if (totalSoldItems <= 0) return;
+        if (payout <= 0) return;
 
-        // Placeholder rate: 1 item = 1 diamond
-        addPayout(totalSoldItems*2);
+        // addPayout takes an int, clamp safely
+        int payoutInt = (payout > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) payout;
+        addPayout(payoutInt);
     }
 
     /**
@@ -173,7 +183,7 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
         return ShippingTier.WOOD;
     }
 
-    // ---- GUI ----
+    // ---- MenuProvider (GUI) ----
     @Override
     public Component getDisplayName() {
         return Component.translatable("block.pp_shippingbin.shipping_bin");
@@ -182,6 +192,7 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory playerInv, Player player) {
+        // Vanilla 9xN chest menus
         return switch (getTier().rows) {
             case 1 -> new ChestMenu(MenuType.GENERIC_9x1, id, playerInv, this, 1);
             case 2 -> new ChestMenu(MenuType.GENERIC_9x2, id, playerInv, this, 2);
@@ -203,14 +214,12 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        ItemStack result = ContainerHelper.removeItem(items, slot, amount);
-        if (!result.isEmpty()) setChanged();
-        return result;
+        ItemStack r = ContainerHelper.removeItem(items, slot, amount);
+        if (!r.isEmpty()) setChanged();
+        return r;
     }
 
-    @Override public ItemStack removeItemNoUpdate(int slot) {
-        return ContainerHelper.takeItem(items, slot);
-    }
+    @Override public ItemStack removeItemNoUpdate(int slot) { return ContainerHelper.takeItem(items, slot); }
 
     @Override
     public void setItem(int slot, ItemStack stack) {
@@ -231,6 +240,7 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
 
     @Override
     public void clearContent() {
+        // Don't shrink the list; just empty stacks
         for (int i = 0; i < items.size(); i++) {
             items.set(i, ItemStack.EMPTY);
         }
