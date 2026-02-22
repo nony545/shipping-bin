@@ -27,7 +27,10 @@ import org.jetbrains.annotations.Nullable;
 public class ShippingBinBlockEntity extends BlockEntity implements Container, MenuProvider {
 
     private NonNullList<ItemStack> items;
-    private long lastSoldDay = -1;
+    private long lastNoonSoldDay = -1;
+    private long lastMidnightSoldDay = -1;
+    private long lastSeenDay = -1;
+
 
     public ShippingBinBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.SHIPPING_BIN.get(), pos, state);
@@ -38,21 +41,40 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Me
         be.serverTick();
     }
 
-   public void serverTick() {
+  public void serverTick() {
     if (level == null || level.isClientSide) return;
 
     long dayTime = level.getDayTime();
     long day = dayTime / 24000L;
     long timeOfDay = dayTime % 24000L;
 
-    // Sell once per day, anytime after midnight
-    if (timeOfDay >= 18000 && day != lastSoldDay) {
+    ShippingTier tier = getTier();
+    // Detect day rollover (sleep or time skip). If day advanced, we missed midnight.
+    if (lastSeenDay != -1 && day > lastSeenDay) {
+    // We crossed midnight at least once since last tick; do the midnight sell for the new day.
+    if (day != lastMidnightSoldDay) {
+        System.out.println("Rollover sell at " + worldPosition + " day=" + day);
+        lastMidnightSoldDay = day;
+        shipAndPayoutDiamonds();
+        setChanged();
+        }
+    }
+    lastSeenDay = day;
 
+    // Netherite: sell at noon (6000) once per day
+    if (tier.schedule == ShippingTier.Schedule.TWICE_DAILY) {
+        if (timeOfDay >= 6000 && day != lastNoonSoldDay) {
+            System.out.println("Noon sell at " + worldPosition + " day=" + day);
+            lastNoonSoldDay = day;
+            shipAndPayoutDiamonds();
+            setChanged();
+        }
+    }
 
-        System.out.println("Selling at " + worldPosition + " day=" + day);
-
-
-        lastSoldDay = day;
+    // Everyone: sell at midnight (18000) once per day
+    if (timeOfDay >= 18000 && day != lastMidnightSoldDay) {
+        System.out.println("Midnight sell at " + worldPosition + " day=" + day);
+        lastMidnightSoldDay = day;
         shipAndPayoutDiamonds();
         setChanged();
     }
@@ -131,7 +153,9 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Me
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider provider) {
         super.saveAdditional(tag, provider);
         ContainerHelper.saveAllItems(tag, items, provider);
-        tag.putLong("LastSoldDay", lastSoldDay);
+       tag.putLong("LastNoonSoldDay", lastNoonSoldDay);
+       tag.putLong("LastMidnightSoldDay", lastMidnightSoldDay);
+       tag.putLong("LastSeenDay", lastSeenDay);
     }
 
     @Override
@@ -139,6 +163,8 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Me
         super.loadAdditional(tag, provider);
         this.items = NonNullList.withSize(getTier().slots(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(tag, items, provider);
-        this.lastSoldDay = tag.getLong("LastSoldDay");
+        this.lastNoonSoldDay = tag.getLong("LastNoonSoldDay");
+        this.lastMidnightSoldDay = tag.getLong("LastMidnightSoldDay");
+        this.lastSeenDay = tag.getLong("LastSeenDay");
     }
 }
