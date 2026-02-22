@@ -2,8 +2,10 @@ package com.nony545.pocketpastures.shippingbin.block;
 
 import com.nony545.pocketpastures.shippingbin.block.entity.ShippingBinBlockEntity;
 import com.nony545.pocketpastures.shippingbin.tier.ShippingTier;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
@@ -24,6 +26,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
+
 import org.jetbrains.annotations.Nullable;
 
 public class ShippingBinBlock extends Block implements EntityBlock {
@@ -32,7 +35,7 @@ public class ShippingBinBlock extends Block implements EntityBlock {
 
     private final ShippingTier tier;
 
-    // Constructor matches your ModBlocks usage: (ShippingTier, Properties)
+    // Constructor matches ModBlocks usage: (ShippingTier, Properties)
     public ShippingBinBlock(ShippingTier tier, Properties properties) {
         super(properties);
         this.tier = tier;
@@ -45,7 +48,7 @@ public class ShippingBinBlock extends Block implements EntityBlock {
 
     // Face player when placed
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
+    public @Nullable BlockState getStateForPlacement(BlockPlaceContext context) {
         return this.defaultBlockState()
                 .setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
@@ -62,30 +65,42 @@ public class ShippingBinBlock extends Block implements EntityBlock {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
-    // Register blockstate properties
+    // Register blockstate properties (THIS is the generic signature you were likely missing)
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING);
     }
 
     // Create BlockEntity
-    @Nullable
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new ShippingBinBlockEntity(pos, state);
     }
 
-    // Server-side ticking
-    @Nullable
+    // Server-side ticking (typed)
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(
+            Level level, BlockState state, BlockEntityType<T> type
+    ) {
         if (level.isClientSide) return null;
 
-        return (lvl, p, st, be) -> {
+        return (lvl, pos, st, be) -> {
             if (be instanceof ShippingBinBlockEntity bin) {
-                ShippingBinBlockEntity.tick(lvl, p, st, bin);
+                ShippingBinBlockEntity.tick(lvl, pos, st, bin);
             }
         };
+    }
+
+    // Drop inventory contents when the block is removed/broken (block item drop comes from loot tables)
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock())) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof ShippingBinBlockEntity bin) {
+                Containers.dropContents(level, pos, bin);
+            }
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     // -------------------------
@@ -94,7 +109,9 @@ public class ShippingBinBlock extends Block implements EntityBlock {
 
     // Empty hand right-click
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(
+            BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit
+    ) {
         if (level.isClientSide) return InteractionResult.SUCCESS;
 
         BlockEntity be = level.getBlockEntity(pos);
@@ -102,13 +119,15 @@ public class ShippingBinBlock extends Block implements EntityBlock {
             player.openMenu(provider);
             return InteractionResult.CONSUME;
         }
-
         return InteractionResult.PASS;
     }
 
     // Right-click while holding an item (1.21+ uses ItemInteractionResult)
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected ItemInteractionResult useItemOn(
+            ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+            InteractionHand hand, BlockHitResult hit
+    ) {
         if (level.isClientSide) return ItemInteractionResult.SUCCESS;
 
         BlockEntity be = level.getBlockEntity(pos);
@@ -116,7 +135,6 @@ public class ShippingBinBlock extends Block implements EntityBlock {
             player.openMenu(provider);
             return ItemInteractionResult.CONSUME;
         }
-
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 }

@@ -4,7 +4,10 @@
     {
       "rolls": 1,
       "entries": [
-        { "type": "minecraft:item", "name": "pp_shippingbin:wood_shipping_bin" }
+        {
+          "type": "minecraft:item",
+          "name": "pp_shippingbin:wood_shipping_bin"
+        }
       ]
     }
   ]
