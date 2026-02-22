@@ -1,7 +1,5 @@
 package com.nony545.pocketpastures.shippingbin.config;
 
-import net.neoforged.fml.ModLoadingContext;
-import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.List;
@@ -37,7 +35,5 @@ public class ShippingBinConfig {
         SPEC = builder.build();
     }
 
-    public static void register() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
-    }
+    private ShippingBinConfig() {}
 }
