@@ -11,6 +11,7 @@
     "B": { "item": "pp_shippingbin:diamond_shipping_bin" }
   },
   "result": {
-    "item": "pp_shippingbin:netherite_shipping_bin"
+    "id": "pp_shippingbin:netherite_shipping_bin",
+    "count": 1
   }
 }
