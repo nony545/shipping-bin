@@ -6,6 +6,7 @@
     "east":  "pp_shippingbin:block/diamond_shipping_bin_side",
     "west":  "pp_shippingbin:block/diamond_shipping_bin_side",
     "up":    "pp_shippingbin:block/diamond_shipping_bin_top",
-    "down":  "pp_shippingbin:block/diamond_shipping_bin_bottom"
+    "down":  "pp_shippingbin:block/diamond_shipping_bin_bottom",
+    "particle": "pp_shippingbin:block/diamond_shipping_bin_side"
   }
 }
