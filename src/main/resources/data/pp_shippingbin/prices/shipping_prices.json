@@ -1,0 +1,8 @@
+{
+  "replace": true,
+  "prices": {
+    "minecraft:carrot": 35,
+    "minecraft:potato": 80,
+    "minecraft:wheat": 25
+  }
+}

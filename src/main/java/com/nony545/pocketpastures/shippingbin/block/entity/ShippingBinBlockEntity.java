@@ -13,6 +13,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.WorldlyContainer;
+import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -28,10 +29,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class ShippingBinBlockEntity extends BlockEntity implements Container, WorldlyContainer, MenuProvider {
 
-    /** Slot 0 is reserved for payout buffer (never sold, hopper-extract only). */
-    private static final int SLOT_PAYOUT = 0;
-
-    /** Placeholder currency for now; swap later to Magic Coins easily. */
+    /** Currency placeholder (easy to swap later). */
     private static final Item PAYOUT_ITEM = Items.DIAMOND;
 
     private NonNullList<ItemStack> items;
@@ -58,10 +56,9 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
 
         ShippingTier tier = getTier();
 
-        // Detect day rollover (sleep or time skip). If day advanced, we missed midnight.
+        // Detect day rollover (sleep/time skip safety)
         if (lastSeenDay != -1 && day > lastSeenDay) {
             if (day != lastMidnightSoldDay) {
-                System.out.println("Rollover sell at " + worldPosition + " day=" + day);
                 lastMidnightSoldDay = day;
                 shipAndPayout();
                 setChanged();
@@ -69,19 +66,17 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
         }
         lastSeenDay = day;
 
-        // Netherite: sell at noon (6000) once per day
+        // Noon sell for Netherite (TWICE_DAILY)
         if (tier.schedule == ShippingTier.Schedule.TWICE_DAILY) {
             if (timeOfDay >= 6000 && day != lastNoonSoldDay) {
-                System.out.println("Noon sell at " + worldPosition + " day=" + day);
                 lastNoonSoldDay = day;
                 shipAndPayout();
                 setChanged();
             }
         }
 
-        // Everyone: sell at midnight (18000) once per day
+        // Midnight sell for all tiers
         if (timeOfDay >= 18000 && day != lastMidnightSoldDay) {
-            System.out.println("Midnight sell at " + worldPosition + " day=" + day);
             lastMidnightSoldDay = day;
             shipAndPayout();
             setChanged();
@@ -89,57 +84,86 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
     }
 
     /**
-     * Sells everything in storage (slots 1..end) and pays currency into SLOT 0.
-     * Slot 0 is NEVER sold and is reserved for payout only.
+     * Sells only NON-currency items.
+     * Currency stacks are never deleted regardless of slot.
      */
     private void shipAndPayout() {
         if (level == null || level.isClientSide) return;
 
-        int totalItems = 0;
+        int totalSoldItems = 0;
 
-        // Count items in storage slots ONLY
-        for (int i = 1; i < items.size(); i++) {
-            ItemStack s = items.get(i);
-            if (!s.isEmpty()) totalItems += s.getCount();
-        }
+        for (int i = 0; i < items.size(); i++) {
+            ItemStack stack = items.get(i);
+            if (stack.isEmpty()) continue;
 
-        if (totalItems <= 0) return;
+            // Protect currency anywhere in inventory
+            if (stack.is(PAYOUT_ITEM)) continue;
 
-        // Clear storage slots ONLY
-        for (int i = 1; i < items.size(); i++) {
+            totalSoldItems += stack.getCount();
             items.set(i, ItemStack.EMPTY);
         }
 
-        // Placeholder: 1 item sold = 1 diamond payout unit
-        addPayout(totalItems);
+        if (totalSoldItems <= 0) return;
+
+        // Placeholder rate: 1 item = 1 diamond
+        addPayout(totalSoldItems*2);
     }
 
     /**
-     * Adds payout currency into SLOT 0 (stacking up to max stack size).
-     * Overflow is ignored for now (we can bank it later).
+     * Fills inventory with payout currency.
+     * If inventory is full, overflow is dropped on the ground.
      */
     private void addPayout(int amount) {
         if (amount <= 0) return;
 
-        ItemStack payout = getItem(SLOT_PAYOUT);
+        ItemStack proto = new ItemStack(PAYOUT_ITEM);
+        int maxStack = proto.getMaxStackSize();
+        int remaining = amount;
 
-        if (payout.isEmpty()) {
-            ItemStack currency = new ItemStack(PAYOUT_ITEM);
-            int add = Math.min(currency.getMaxStackSize(), amount);
-            currency.setCount(add);
-            setItem(SLOT_PAYOUT, currency);
-            amount -= add;
-        } else if (payout.is(PAYOUT_ITEM) && payout.getCount() < payout.getMaxStackSize()) {
-            int add = Math.min(amount, payout.getMaxStackSize() - payout.getCount());
-            payout.grow(add);
-            setItem(SLOT_PAYOUT, payout);
-            amount -= add;
+        // 1) Top off existing currency stacks
+        for (int i = 0; i < items.size() && remaining > 0; i++) {
+            ItemStack stack = items.get(i);
+            if (stack.isEmpty()) continue;
+            if (!stack.is(PAYOUT_ITEM)) continue;
+
+            int space = maxStack - stack.getCount();
+            if (space <= 0) continue;
+
+            int add = Math.min(space, remaining);
+            stack.grow(add);
+            items.set(i, stack);
+            remaining -= add;
         }
 
-        // Overflow policy later:
-        // - bank remainder as an int in NBT (recommended)
-        // - or drop to world
-        // For now: discard overflow to keep behavior predictable.
+        // 2) Fill empty slots
+        for (int i = 0; i < items.size() && remaining > 0; i++) {
+            ItemStack stack = items.get(i);
+            if (!stack.isEmpty()) continue;
+
+            int add = Math.min(maxStack, remaining);
+            items.set(i, new ItemStack(PAYOUT_ITEM, add));
+            remaining -= add;
+        }
+
+        // 3) Drop overflow on ground
+        if (remaining > 0 && level != null && !level.isClientSide) {
+            while (remaining > 0) {
+                int drop = Math.min(maxStack, remaining);
+                ItemStack dropStack = new ItemStack(PAYOUT_ITEM, drop);
+
+                Containers.dropItemStack(
+                        level,
+                        worldPosition.getX() + 0.5,
+                        worldPosition.getY() + 1.0,
+                        worldPosition.getZ() + 0.5,
+                        dropStack
+                );
+
+                remaining -= drop;
+            }
+        }
+
+        setChanged();
     }
 
     public ShippingTier getTier() {
@@ -149,7 +173,7 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
         return ShippingTier.WOOD;
     }
 
-    // ---- MenuProvider (GUI) ----
+    // ---- GUI ----
     @Override
     public Component getDisplayName() {
         return Component.translatable("block.pp_shippingbin.shipping_bin");
@@ -158,7 +182,6 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory playerInv, Player player) {
-        // Vanilla 9xN chest menus
         return switch (getTier().rows) {
             case 1 -> new ChestMenu(MenuType.GENERIC_9x1, id, playerInv, this, 1);
             case 2 -> new ChestMenu(MenuType.GENERIC_9x2, id, playerInv, this, 2);
@@ -168,10 +191,7 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
     }
 
     // ---- Container ----
-    @Override
-    public int getContainerSize() {
-        return items.size();
-    }
+    @Override public int getContainerSize() { return items.size(); }
 
     @Override
     public boolean isEmpty() {
@@ -179,20 +199,16 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
         return true;
     }
 
-    @Override
-    public ItemStack getItem(int slot) {
-        return items.get(slot);
-    }
+    @Override public ItemStack getItem(int slot) { return items.get(slot); }
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        ItemStack r = ContainerHelper.removeItem(items, slot, amount);
-        if (!r.isEmpty()) setChanged();
-        return r;
+        ItemStack result = ContainerHelper.removeItem(items, slot, amount);
+        if (!result.isEmpty()) setChanged();
+        return result;
     }
 
-    @Override
-    public ItemStack removeItemNoUpdate(int slot) {
+    @Override public ItemStack removeItemNoUpdate(int slot) {
         return ContainerHelper.takeItem(items, slot);
     }
 
@@ -204,65 +220,47 @@ public class ShippingBinBlockEntity extends BlockEntity implements Container, Wo
 
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
-        // Reserve slot 0 as payout-only (blocks manual placement too)
-        return slot != SLOT_PAYOUT;
+        return true; // currency can exist anywhere
     }
 
     @Override
     public boolean stillValid(Player player) {
-        return level != null && !isRemoved() && player.distanceToSqr(worldPosition.getCenter()) <= 64.0;
+        return level != null && !isRemoved()
+                && player.distanceToSqr(worldPosition.getCenter()) <= 64.0;
     }
 
     @Override
     public void clearContent() {
-        // DO NOT items.clear() — that shrinks the list to size 0 and breaks container logic.
         for (int i = 0; i < items.size(); i++) {
             items.set(i, ItemStack.EMPTY);
         }
         setChanged();
     }
 
-    // ---- WorldlyContainer (Hoppers) ----
+    // ---- Hopper Automation ----
 
     private boolean allowsAutomation() {
-        // Diamond + Netherite should be automatable in your enum
         return getTier().automatable;
-    }
-
-    private int[] storageSlots() {
-        int size = getContainerSize();
-        if (size <= 1) return new int[0];
-        int[] slots = new int[size - 1];
-        for (int i = 1; i < size; i++) slots[i - 1] = i;
-        return slots;
     }
 
     @Override
     public int[] getSlotsForFace(Direction side) {
         if (!allowsAutomation()) return new int[0];
 
-        // DOWN: extract payout only
-        if (side == Direction.DOWN) return new int[]{SLOT_PAYOUT};
-
-        // UP + SIDES: insert into storage only
-        return storageSlots();
+        int[] slots = new int[getContainerSize()];
+        for (int i = 0; i < slots.length; i++) slots[i] = i;
+        return slots;
     }
 
     @Override
     public boolean canPlaceItemThroughFace(int slot, ItemStack stack, @Nullable Direction dir) {
-        if (!allowsAutomation()) return false;
-        if (slot == SLOT_PAYOUT) return false;
-        return canPlaceItem(slot, stack);
+        return allowsAutomation();
     }
 
     @Override
     public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction dir) {
         if (!allowsAutomation()) return false;
-
-        // Only pull payout currency from the bottom
         if (dir != Direction.DOWN) return false;
-        if (slot != SLOT_PAYOUT) return false;
-
         return stack.is(PAYOUT_ITEM);
     }
 
