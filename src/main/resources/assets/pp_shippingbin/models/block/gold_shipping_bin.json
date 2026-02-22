@@ -1,0 +1,11 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "north": "pp_shippingbin:block/gold_shipping_bin_front",
+    "south": "pp_shippingbin:block/gold_shipping_bin_side",
+    "east":  "pp_shippingbin:block/gold_shipping_bin_side",
+    "west":  "pp_shippingbin:block/gold_shipping_bin_side",
+    "up":    "pp_shippingbin:block/gold_shipping_bin_top",
+    "down":  "pp_shippingbin:block/gold_shipping_bin_bottom"
+  }
+}

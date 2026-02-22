@@ -6,11 +6,12 @@
     "PPP"
   ],
   "key": {
-    "I": { "tag": "minecraft:iron_ingots" },
+    "I": { "item": "minecraft:iron_ingot" },
     "P": { "tag": "minecraft:planks" },
     "B": { "item": "pp_shippingbin:wood_shipping_bin" }
   },
   "result": {
-    "item": "pp_shippingbin:iron_shipping_bin"
+    "id": "pp_shippingbin:iron_shipping_bin",
+    "count": 1
   }
 }

@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "pp_shippingbin:block/netherite_shipping_bin" },
+    "facing=south": { "model": "pp_shippingbin:block/netherite_shipping_bin", "y": 180 },
+    "facing=west":  { "model": "pp_shippingbin:block/netherite_shipping_bin", "y": 270 },
+    "facing=east":  { "model": "pp_shippingbin:block/netherite_shipping_bin", "y": 90 }
+  }
+}
