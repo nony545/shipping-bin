@@ -1,5 +1,6 @@
 {
   "type": "minecraft:block",
+  "random_sequence": "pp_shippingbin:blocks/netherite_shipping_bin",
   "pools": [
     {
       "rolls": 1,
