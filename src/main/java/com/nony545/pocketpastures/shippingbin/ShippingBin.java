@@ -17,6 +17,7 @@ import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
+import com.nony545.pocketpastures.shippingbin.config.ShippingBinConfig;
 
 @Mod(ShippingBin.MODID)
 public class ShippingBin {
@@ -69,4 +70,5 @@ public class ShippingBin {
         event.addListener(new PriceManager());
         LOGGER.info("Registered PriceManager reload listener.");
     }
+    ShippingBinConfig.register();
 }
