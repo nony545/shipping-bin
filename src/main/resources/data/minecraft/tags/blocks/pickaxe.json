@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "pp_shippingbin:wood_shipping_bin",
+    "pp_shippingbin:iron_shipping_bin",
+    "pp_shippingbin:gold_shipping_bin",
+    "pp_shippingbin:diamond_shipping_bin",
+    "pp_shippingbin:netherite_shipping_bin"
+  ]
+}
